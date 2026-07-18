@@ -1,0 +1,50 @@
+# Binaries
+shmd
+shmd-*
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test and coverage
+*.test
+*.out
+coverage.out
+coverage.html
+coverage
+
+# Go
+go.work
+go.work.sum
+*.prof
+*.pprof
+debug
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Build
+/dist/
+/bin/
+/tmp/
+
+# Documentation
+/site/
+
+# Misc
+*.log
+*.bak
+*.tmp
