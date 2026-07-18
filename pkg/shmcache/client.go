@@ -9,8 +9,12 @@ import (
 	"time"
 )
 
-// CacheClient is a client for the shared memory cache.
-// It connects to the server via UDS and reads data directly from shared memory.
+// CacheClient provides read/write access to a shared memory cache.
+//
+// It connects to the cache server via Unix Domain Socket for metadata lookups
+// and maps the shared memory segment directly for zero-copy data reads.
+// Multiple CacheClient instances can operate concurrently in different processes;
+// all readers share the same mmap'd memory with no locks.
 type CacheClient struct {
 	udsPath string
 
@@ -26,6 +30,9 @@ type CacheClient struct {
 }
 
 // NewCacheClient creates a new cache client.
+//
+// udsAddr is the Unix Domain Socket path where the server is listening.
+// Use abstract namespace (starting with "\x00") for address-isolated sockets.
 func NewCacheClient(udsAddr string) *CacheClient {
 	return &CacheClient{
 		udsPath: udsAddr,

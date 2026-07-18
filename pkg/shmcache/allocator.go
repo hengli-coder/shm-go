@@ -22,7 +22,19 @@ import (
 //	...
 //	class N (32 KB)  : chunk [classRange[N-1] .. classRange[N])
 
-// SlabAllocator manages chunk allocation within a shared memory data region.
+// SlabAllocator manages fixed-size chunk allocation within a shared memory region.
+//
+// It partitions the data region into 10 size classes (64B to 32KB as powers of 2),
+// each with its own lock-free free list. Allocation and free are O(1) operations
+// using atomic CAS on the free list head.
+//
+// Layout:
+//
+//	[data region] = [class 0 chunks] [class 1 chunks] ... [class 9 chunks]
+//
+// Each chunk stores: [nextFree:4B (if free)] or [keyLen:4B][keyBytes][valueBytes] (if used)
+//
+// Concurrency: single writer (server) calls Alloc/Free; readers never access allocator.
 type SlabAllocator struct {
 	Data       []byte
 	ChunkSizes []int32

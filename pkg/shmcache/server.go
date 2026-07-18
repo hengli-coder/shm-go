@@ -12,8 +12,15 @@ import (
 	"time"
 )
 
-// CacheServer is the shared memory cache server.
-// It owns the shared memory segment, manages writes, and serves metadata via UDS.
+// CacheServer is the sole writer managing a shared memory cache.
+//
+// It owns the shared memory segment, handles all write operations (SET/DELETE),
+// and serves metadata lookups over Unix Domain Socket. Client processes read
+// data directly from the shared memory — zero-copy, no locks required.
+//
+// Architecture: single-writer + multiple-reader
+//   - Server: owns segment, allocates memory, updates hash table via CAS
+//   - Clients: mmap the same segment, read via atomic loads only
 type CacheServer struct {
 	SegmentSize int
 	UDSAddr     string
@@ -32,7 +39,14 @@ type CacheServer struct {
 	hashCap    int
 }
 
-// NewCacheServer creates a CacheServer with shared memory and UDS.
+// NewCacheServer creates a CacheServer with a new or existing shared memory segment.
+//
+// Parameters:
+//   - segmentName: name of the shared memory segment (appears as /dev/shm/<name> on Linux)
+//   - segmentSize: size in bytes (minimum 1 MB, recommended 64MB–2GB)
+//   - udsPath: Unix Domain Socket path (use "\x00" prefix for abstract namespace)
+//
+// The server is the sole writer — only one instance should exist per segment.
 func NewCacheServer(segmentName string, segmentSize int, udsPath string) (*CacheServer, error) {
 	if segmentSize <= 0 {
 		segmentSize = SegmentDefaultSize
