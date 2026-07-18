@@ -1,4 +1,4 @@
-module github.com/user/shm-go
+module github.com/hengli-coder/shm-go
 
 go 1.25.0
 
