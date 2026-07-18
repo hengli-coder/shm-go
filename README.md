@@ -125,26 +125,43 @@ type HashSlot struct {
 ## 项目结构
 
 ```
-d:\go\shm-go\
+shm-go/
 ├── go.mod / go.sum
-├── README.md                  ← 就是这个文件
+├── Makefile
+├── Dockerfile
+├── README.md
+├── CHANGELOG.md
+├── CONTRIBUTING.md
+├── SECURITY.md
+├── .golangci.yml
+├── .gitignore
+├── .github/
+│   └── workflows/
+│       ├── ci.yml                  # CI: lint, test, bench, build
+│       └── release.yml             # GoReleaser 自动发布
 ├── cmd/
 │   └── shmd/
-│       ├── main.go            # Linux 入口（build tag: linux）
-│       └── main_other.go      # 非 Linux 桩代码
-├── pkg/
-│   └── shmcache/
-│       ├── types.go           # 公共类型、常量
-│       ├── hash.go            # maphash 哈希函数
-│       ├── shmcache.go        # 平台无关接口
-│       ├── shmcache_linux.go  # Linux mmap 实现
-│       ├── shmcache_other.go  # 非 Linux 桩实现
-│       ├── allocator.go       # Slab 内存分配器
-│       ├── hashtable.go       # 无锁哈希表（开放地址 + 线性探测）
-│       ├── protocol.go        # UDS 二进制协议编解码
-│       ├── server.go          # UDS 服务端 + 缓存逻辑
-│       ├── client.go          # 客户端封装
-│       └── shmcache_test.go   # 单元测试
+│       ├── main.go                 # Linux 入口（build tag: linux）
+│       └── main_other.go           # 非 Linux 桩代码
+├── examples/
+│   └── demo/                       # 完整使用示例
+│       └── main.go
+├── docs/
+│   └── BENCHMARKS.md               # 性能基准文档
+└── pkg/
+    └── shmcache/
+        ├── types.go                # 公共类型、常量
+        ├── hash.go                 # maphash 哈希函数
+        ├── shmcache.go             # 平台无关接口
+        ├── shmcache_linux.go       # Linux mmap 实现
+        ├── shmcache_other.go       # 非 Linux 桩实现
+        ├── allocator.go            # Slab 内存分配器
+        ├── hashtable.go            # 无锁哈希表（开放地址 + 线性探测）
+        ├── protocol.go             # UDS 二进制协议编解码
+        ├── server.go               # UDS 服务端 + 缓存逻辑
+        ├── client.go               # 客户端封装
+        ├── shmcache_test.go        # 单元测试
+        └── example_test.go         # 示例代码（godoc 可见）
 ```
 
 ---
