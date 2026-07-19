@@ -4,31 +4,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-shm-go is a high-performance cache service built on Linux POSIX shared memory (`shm_open` + `mmap`). It follows a **single-writer + multiple-reader** architecture where:
-- The `shmd` daemon is the sole writer, managing the shared memory segment
-- Client processes read directly from the same mmap'd memory — zero-copy, no locks required on the read path
-- Communication happens over Unix Domain Socket (abstract namespace) for control-plane operations (GET/SET/DELETE metadata lookups)
+**featcache** is a zero-copy runtime data cache for AI inference. It solves the problem of slow startup caused by loading large static data (embeddings, tokenizer vocabularies, feature dictionaries) across multiple inference processes.
 
-Designed for data-heavy scenarios like AI model inference where multiple processes need to share large embedding tables or feature dictionaries.
+Architecture: single-writer (Loader) + multiple-reader (inference processes).
+
+- The `featload` daemon loads data from a source, writes it to a POSIX shared memory segment, and builds a hash index
+- Inference processes mmap the same segment and read directly — zero-copy, no locks, no syscalls on the read path
+- Communication over Unix Domain Socket (abstract namespace) for control-plane operations only (initial metadata lookup, version notifications)
+- Data-plane reads go directly through shared memory, never through UDS
 
 ## Build & Test Commands
 
 ```bash
-# Build the daemon (Linux only)
-go build ./cmd/shmd
+# Build the loader daemon (Linux only)
+go build ./cmd/featload
 
 # Run all tests
-go test ./pkg/shmcache/ -v -count=1
+go test ./pkg/featcache/ -v -count=1
 
 # Run tests with coverage
-go test ./pkg/shmcache/ -coverprofile=coverage.out -covermode=atomic -count=1
+go test ./pkg/featcache/ -coverprofile=coverage.out -covermode=atomic -count=1
 go tool cover -func=coverage.out
 
 # Run benchmarks
-go test ./pkg/shmcache/ -bench=. -benchmem -count=1
+go test ./pkg/featcache/ -bench=. -benchmem -count=1
 
 # Run a specific test
-go test ./pkg/shmcache/ -v -run TestHashTable -count=1
+go test ./pkg/featcache/ -v -run TestHashTable -count=1
 ```
 
 ## Platform Support
@@ -39,43 +41,35 @@ Linux only. The codebase uses build tags:
 
 Tests use in-memory byte slices to test core logic on non-Linux platforms.
 
-## Architecture
-
-### Shared Memory Layout
+## Memory Layout
 
 ```
-Offset 0:      Header (64B) — Magic, Version, Size, HashCap
-Offset 64:     Slab metadata region
-After slab:    Hash Table (open-addressed, linear probing)
-After hash:    Data Chunks (actual key+value storage)
+Offset 0:      Header (64B) — Magic, Version, Size, HashCap, GenCounter, etc.
+After header:  Hash Table (open-addressed, linear probing, 24B per slot)
+After hash:    Data Region (compact key+value storage, append-only)
 ```
 
-### Key Components
+No slab allocator. Data is stored compactly: `[keyLen:4B][keyBytes][valueBytes]` per entry.
+
+## Concurrency Model
+
+- **Writer (Loader)**: CAS to claim hash slots; atomic store for status. Writes data first, then marks slot as used.
+- **Readers (inference processes)**: Atomic load slot status, then read data directly — no locks, no syscalls.
+- **Hash table**: Tombstones (`SlotTomb`) preserve probe sequences after deletion.
+
+## Key Components (planned)
 
 | File | Purpose |
 |------|---------|
-| `types.go` | Constants, Header, HashSlot, SlabClassDesc structures |
+| `types.go` | Constants, Header, HashSlot structures |
 | `hash.go` | `HashKey()` using `hash/maphash` |
-| `allocator.go` | Lock-free Slab allocator with 10 size classes (64B–32KB) |
-| `hashtable.go` | Open-addressed hash table with atomic CAS for concurrent reads |
-| `protocol.go` | Binary TLV protocol over UDS (8B request header, 12B response header) |
-| `server.go` | `CacheServer` — owns shared memory, handles UDS requests |
-| `client.go` | `CacheClient` — connects to server, reads data from shared memory |
-| `shmcache_linux.go` | Platform-specific mmap/munmap implementation |
-| `shmcache.go` | Cross-platform `Segment` API wrapper |
-
-### Concurrency Model
-
-- **Writer (server)**: Uses CAS operations to claim hash slots; atomic store for status updates
-- **Readers (clients)**: Load slot status atomically, then read data — no locks, no syscalls
-- **Slab free lists**: Lock-free push/pop via CAS on `FreeHeads[classIdx]`
-- **Hash table**: Tombstones (`SlotTomb`) preserve probe sequences after deletion
-
-### Data Format in Slab
-
-Each chunk stores: `[keyLen:4B][keyBytes][valueBytes]`
-
-The hash table's `Offset` field points to the start of this record in the data region.
+| `segment.go` | Cross-platform `Segment` API wrapper |
+| `segment_linux.go` | Platform-specific mmap/munmap |
+| `hashtable.go` | Open-addressed hash table with atomic CAS |
+| `loader.go` | Batch loader — reads from DataSource, writes to segment |
+| `reader.go` | Zero-copy reader — direct shared memory access |
+| `datasource.go` | DataSource interface (file, database, stream) |
+| `protocol.go` | UDS binary protocol for control plane |
 
 ## Development Notes
 

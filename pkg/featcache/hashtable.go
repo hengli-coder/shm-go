@@ -1,4 +1,4 @@
-package shmcache
+package featcache
 
 import (
 	"encoding/binary"

@@ -1,4 +1,4 @@
-module github.com/hengli-coder/shm-go
+module github.com/hengli-coder/featcache
 
 go 1.25.0
 

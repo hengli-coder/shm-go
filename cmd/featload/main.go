@@ -10,13 +10,13 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/user/shm-go/pkg/shmcache"
+	"github.com/hengli-coder/featcache/pkg/featcache"
 )
 
 func main() {
-	segmentName := flag.String("name", "shm-go-cache", "shared memory segment name")
+	segmentName := flag.String("name", "featcache", "shared memory segment name")
 	cacheSize := flag.Int("size", 2<<30, "shared memory segment size in bytes (default 2GB)")
-	udsPath := flag.String("uds", "\x00shm-go-cache", "UDS abstract socket path (prefix with \\x00 for abstract namespace)")
+	udsPath := flag.String("uds", "\x00featcache", "UDS abstract socket path (prefix with \\x00 for abstract namespace)")
 	flag.Parse()
 
 	// Convert \x00 prefix string to actual null byte for abstract sockets.
@@ -26,11 +26,11 @@ func main() {
 	}
 
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	log.Printf("shmd v1.0 starting")
+	log.Printf("featcache starting")
 	log.Printf("  segment: %s (%d MB)", *segmentName, *cacheSize>>20)
 	log.Printf("  uds:     %s", udsAddr)
 
-	server, err := shmcache.NewCacheServer(*segmentName, *cacheSize, udsAddr)
+	server, err := featcache.NewCacheServer(*segmentName, *cacheSize, udsAddr)
 	if err != nil {
 		log.Fatalf("failed to create cache server: %v", err)
 	}

@@ -7,16 +7,16 @@ import (
 	"log"
 	"time"
 
-	"github.com/hengli-coder/shm-go/pkg/shmcache"
+	featcache "github.com/hengli-coder/featcache/pkg/featcache"
 )
 
 func main() {
-	const segmentName = "shm-go-demo"
-	const udsAddr = "\x00shm-go-demo"
+	const segmentName = "featcache-demo"
+	const udsAddr = "\x00featcache-demo"
 	const segmentSize = 64 * 1024 * 1024 // 64 MB
 
 	// ─── Start Server ────────────────────────────────────────────────
-	server, err := shmcache.NewCacheServer(segmentName, segmentSize, udsAddr)
+	server, err := featcache.NewCacheServer(segmentName, segmentSize, udsAddr)
 	if err != nil {
 		log.Fatalf("Failed to create server: %v", err)
 	}
@@ -33,7 +33,7 @@ func main() {
 	time.Sleep(100 * time.Millisecond)
 
 	// ─── Connect Client ──────────────────────────────────────────────
-	client := shmcache.NewCacheClient(udsAddr)
+	client := featcache.NewCacheClient(udsAddr)
 	if err := client.Connect(segmentName); err != nil {
 		log.Fatalf("Failed to connect: %v", err)
 	}

@@ -10,7 +10,7 @@ import (
 
 func main() {
 	flag.Parse()
-	log.Fatal("shmd requires Linux (shared memory not supported on this platform)")
+	log.Fatal("featload requires Linux (shared memory not supported on this platform)")
 }
 
 // keep unused import

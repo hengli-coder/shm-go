@@ -1,11 +1,11 @@
-// Package shmcache implements a shared-memory based cache service for Linux.
+// Package featcache implements a zero-copy runtime data cache for AI inference.
 //
 // Architecture: single-writer + multiple-reader pattern.
 // The server owns the shared memory segment (via mmap of /dev/shm file),
 // manages writes (SET/UPDATE/DELETE), and serves metadata lookups over
 // Unix Domain Socket. Clients map the same shared memory and read data
 // directly — zero-copy, no kernel involvement on the read path.
-package shmcache
+package featcache
 
 import "time"
 
